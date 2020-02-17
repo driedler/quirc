@@ -398,13 +398,6 @@ static quirc_decode_error_t correct_format(uint16_t *f_ret)
  * Decoder algorithm
  */
 
-struct datastream {
-	uint8_t		raw[QUIRC_MAX_PAYLOAD];
-	int		data_bits;
-	int		ptr;
-
-	uint8_t         data[QUIRC_MAX_PAYLOAD];
-};
 
 static inline int grid_bit(const struct quirc_code *code, int x, int y)
 {
@@ -527,7 +520,7 @@ static int reserved_cell(int version, int i, int j)
 
 static void read_bit(const struct quirc_code *code,
 		     struct quirc_data *data,
-		     struct datastream *ds, int i, int j)
+		     struct quirc_datastream *ds, int i, int j)
 {
 	int bitpos = ds->data_bits & 7;
 	int bytepos = ds->data_bits >> 3;
@@ -544,7 +537,7 @@ static void read_bit(const struct quirc_code *code,
 
 static void read_data(const struct quirc_code *code,
 		      struct quirc_data *data,
-		      struct datastream *ds)
+		      struct quirc_datastream *ds)
 {
 	int y = code->size - 1;
 	int x = code->size - 1;
@@ -570,7 +563,7 @@ static void read_data(const struct quirc_code *code,
 }
 
 static quirc_decode_error_t codestream_ecc(struct quirc_data *data,
-					   struct datastream *ds)
+					   struct quirc_datastream *ds)
 {
 	const struct quirc_version_info *ver =
 		&quirc_version_db[data->version];
@@ -612,12 +605,12 @@ static quirc_decode_error_t codestream_ecc(struct quirc_data *data,
 	return QUIRC_SUCCESS;
 }
 
-static inline int bits_remaining(const struct datastream *ds)
+static inline int bits_remaining(const struct quirc_datastream *ds)
 {
 	return ds->data_bits - ds->ptr;
 }
 
-static int take_bits(struct datastream *ds, int len)
+static int take_bits(struct quirc_datastream *ds, int len)
 {
 	int ret = 0;
 
@@ -637,7 +630,7 @@ static int take_bits(struct datastream *ds, int len)
 }
 
 static int numeric_tuple(struct quirc_data *data,
-			 struct datastream *ds,
+			 struct quirc_datastream *ds,
 			 int bits, int digits)
 {
 	int tuple;
@@ -658,7 +651,7 @@ static int numeric_tuple(struct quirc_data *data,
 }
 
 static quirc_decode_error_t decode_numeric(struct quirc_data *data,
-					   struct datastream *ds)
+					   struct quirc_datastream *ds)
 {
 	int bits = 14;
 	int count;
@@ -694,7 +687,7 @@ static quirc_decode_error_t decode_numeric(struct quirc_data *data,
 }
 
 static int alpha_tuple(struct quirc_data *data,
-		       struct datastream *ds,
+		       struct quirc_datastream *ds,
 		       int bits, int digits)
 {
 	int tuple;
@@ -719,7 +712,7 @@ static int alpha_tuple(struct quirc_data *data,
 }
 
 static quirc_decode_error_t decode_alpha(struct quirc_data *data,
-					 struct datastream *ds)
+					 struct quirc_datastream *ds)
 {
 	int bits = 13;
 	int count;
@@ -749,7 +742,7 @@ static quirc_decode_error_t decode_alpha(struct quirc_data *data,
 }
 
 static quirc_decode_error_t decode_byte(struct quirc_data *data,
-					struct datastream *ds)
+					struct quirc_datastream *ds)
 {
 	int bits = 16;
 	int count;
@@ -771,7 +764,7 @@ static quirc_decode_error_t decode_byte(struct quirc_data *data,
 }
 
 static quirc_decode_error_t decode_kanji(struct quirc_data *data,
-					 struct datastream *ds)
+					 struct quirc_datastream *ds)
 {
 	int bits = 12;
 	int count;
@@ -811,7 +804,7 @@ static quirc_decode_error_t decode_kanji(struct quirc_data *data,
 }
 
 static quirc_decode_error_t decode_eci(struct quirc_data *data,
-				       struct datastream *ds)
+				       struct quirc_datastream *ds)
 {
 	if (bits_remaining(ds) < 8)
 		return QUIRC_ERROR_DATA_UNDERFLOW;
@@ -834,7 +827,7 @@ static quirc_decode_error_t decode_eci(struct quirc_data *data,
 }
 
 static quirc_decode_error_t decode_payload(struct quirc_data *data,
-					   struct datastream *ds)
+					   struct quirc_datastream *ds)
 {
 	while (bits_remaining(ds) >= 4) {
 		quirc_decode_error_t err = QUIRC_SUCCESS;
@@ -882,16 +875,15 @@ done:
 }
 
 quirc_decode_error_t quirc_decode(const struct quirc_code *code,
-				  struct quirc_data *data)
+				  struct quirc_data *data, struct quirc_datastream *ds)
 {
 	quirc_decode_error_t err;
-	struct datastream ds;
 
 	if ((code->size - 17) % 4)
 		return QUIRC_ERROR_INVALID_GRID_SIZE;
 
 	memset(data, 0, sizeof(*data));
-	memset(&ds, 0, sizeof(ds));
+	memset(ds, 0, sizeof(*ds));
 
 	data->version = (code->size - 17) / 4;
 
@@ -906,12 +898,12 @@ quirc_decode_error_t quirc_decode(const struct quirc_code *code,
 	if (err)
 		return err;
 
-	read_data(code, data, &ds);
-	err = codestream_ecc(data, &ds);
+	read_data(code, data, ds);
+	err = codestream_ecc(data, ds);
 	if (err)
 		return err;
 
-	err = decode_payload(data, &ds);
+	err = decode_payload(data, ds);
 	if (err)
 		return err;
 

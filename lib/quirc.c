@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "quirc_internal.h"
+#include "esp_heap_caps.h"
+
+
 
 const char *quirc_version(void)
 {
@@ -25,7 +28,7 @@ const char *quirc_version(void)
 
 struct quirc *quirc_new(void)
 {
-	struct quirc *q = malloc(sizeof(*q));
+	struct quirc *q = heap_caps_malloc(sizeof(*q), MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
 
 	if (!q)
 		return NULL;
@@ -62,7 +65,7 @@ int quirc_resize(struct quirc *q, int w, int h)
 	 * alloc a new buffer for q->image. We avoid realloc(3) because we want
 	 * on failure to be leave `q` in a consistant, unmodified state.
 	 */
-	image = calloc(w, h);
+	image = heap_caps_malloc(w*h, MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
 	if (!image)
 		goto fail;
 

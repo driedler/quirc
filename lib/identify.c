@@ -122,8 +122,8 @@ static void perspective_unmap(const double *c,
  * Span-based floodfill routine
  */
 
-#ifndef FLOOD_FILL_MAX_DEPTH
-#define FLOOD_FILL_MAX_DEPTH		4096
+#ifndef QUIRC_FLOOD_FILL_MAX_DEPTH
+#define QUIRC_FLOOD_FILL_MAX_DEPTH		4096
 #endif
 
 
@@ -138,7 +138,7 @@ static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
 	int i;
 	quirc_pixel_t *row = q->pixels + y * q->w;
 
-	if (depth >= FLOOD_FILL_MAX_DEPTH)
+	if (depth >= QUIRC_FLOOD_FILL_MAX_DEPTH)
 		return;
 
 	while (left > 0 && row[left - 1] == from)
